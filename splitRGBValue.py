@@ -2,7 +2,7 @@
 
 from gimpfu import *
 
-def splitRGB(img, layer):
+def splitRGBValue(img, layer):
     # start
     gimp.progress_init("spliting...")
     pdb.gimp_image_undo_group_start(img)
@@ -54,17 +54,17 @@ def splitRGB(img, layer):
                         pixel = tile[x,y]
                         
                         if pixel[0] != "\x00":
-                            pixelR = pixel[0] + "\x00\x00" + "\xff"
+                            pixelR = pixel[0] + pixel[0] + pixel[0] + "\xff"
                         else:
                             pixelR = "\x00\x00\x00\x00"
                             
                         if pixel[1] != "\x00":
-                            pixelG = "\x00" + pixel[1] + "\x00" + "\xff"
+                            pixelG = pixel[1] + pixel[1] + pixel[1] + "\xff"
                         else:
                             pixelG = "\x00\x00\x00\x00"
                             
                         if pixel[2] != "\x00":
-                            pixelB = "\x00\x00" + pixel[2] + "\xff"
+                            pixelB = pixel[2] + pixel[2] + pixel[2] + "\xff"
                         else:
                             pixelB = "\x00\x00\x00\x00"
                         
@@ -94,14 +94,14 @@ def splitRGB(img, layer):
 
 
 register(
-    "python-fu-splitRGB",
-    "splitRGB",
-    "split RGB to each layer",
+    "python-fu-splitRGBValue",
+    "splitRGBValue",
+    "split RGB Value to each layer",
     "jscfping", "jscfping", "2020",
-    "<Image>/splitRGB",
+    "<Image>/splitRGBVal",
     "RGB, RGB*",
     [],
     [],
-    splitRGB)
+    splitRGBValue)
 
 main()

@@ -2,15 +2,22 @@
 
 from gimpfu import *
 
-def splitRGB(img, layer):
+defaultType = 1 #RGBA-IMAGE
+defaultOpacity = 100
+defaultMode = 0 #NORMAL-MODE
+
+def splitRGBA(img, layer):
     # start
     gimp.progress_init("spliting...")
     pdb.gimp_image_undo_group_start(img)
+    layer.visible = False
+
+    copyMask(img, layer)
     
     # Create the new layers.
-    layerR = gimp.Layer(img, "R", layer.width, layer.height, layer.type, layer.opacity, layer.mode)
-    layerG = gimp.Layer(img, "G", layer.width, layer.height, layer.type, layer.opacity, layer.mode)
-    layerB = gimp.Layer(img, "B", layer.width, layer.height, layer.type, layer.opacity, layer.mode)
+    layerR = gimp.Layer(img, "R", layer.width, layer.height, defaultType, defaultOpacity, defaultMode)
+    layerG = gimp.Layer(img, "G", layer.width, layer.height, defaultType, defaultOpacity, defaultMode)
+    layerB = gimp.Layer(img, "B", layer.width, layer.height, defaultType, defaultOpacity, defaultMode)
     img.add_layer(layerR, 0)
     img.add_layer(layerG, 1)
     img.add_layer(layerB, 2)
@@ -54,17 +61,17 @@ def splitRGB(img, layer):
                         pixel = tile[x,y]
                         
                         if pixel[0] != "\x00":
-                            pixelR = pixel[0] + "\x00\x00" + "\xff"
+                            pixelR = pixel[0] + pixel[0] + pixel[0] + "\xff"
                         else:
                             pixelR = "\x00\x00\x00\x00"
                             
                         if pixel[1] != "\x00":
-                            pixelG = "\x00" + pixel[1] + "\x00" + "\xff"
+                            pixelG = pixel[1] + pixel[1] + pixel[1] + "\xff"
                         else:
                             pixelG = "\x00\x00\x00\x00"
                             
                         if pixel[2] != "\x00":
-                            pixelB = "\x00\x00" + pixel[2] + "\xff"
+                            pixelB = pixel[2] + pixel[2] + pixel[2] + "\xff"
                         else:
                             pixelB = "\x00\x00\x00\x00"
                         
@@ -72,6 +79,8 @@ def splitRGB(img, layer):
                         tileG[x,y] = pixelG
                         tileB[x,y] = pixelB
 
+
+    
 
     # update
     layerR.flush()
@@ -93,15 +102,69 @@ def splitRGB(img, layer):
 
 
 
+
+
+
+def copyMask(img, layer):
+
+    # Create the new layers.
+    layerM = gimp.Layer(img, "MASK", layer.width, layer.height, defaultType, defaultOpacity, defaultMode)
+    layerM.visible = False
+    img.add_layer(layerM, 0)
+
+    
+    # Clear the new layers.
+    pdb.gimp_edit_clear(layerM)
+    layerM.flush()
+
+    if layer.mask is None:
+        return
+    else:
+        nouse = 0
+
+    # for GIMP 64*64 pixels is a block unit for greater 64 pixels
+    xBlocks = int(layer.width / 64)
+    if(layer.width % 64 > 0):
+        xBlocks += 1
+    else:
+        xBlocks = xBlocks
+
+    yBlocks = int(layer.height / 64)
+    if(layer.width % 64 > 0):
+        yBlocks += 1
+    else:
+        yBlocks = yBlocks
+    
+    
+    
+    
+    for yB in range(yBlocks):
+            for xB in range(xBlocks):
+    
+                tile = layer.mask.get_tile(False, yB, xB)
+                tileM = layerM.get_tile(False, yB, xB)
+                
+                for y in range(tile.eheight):
+                    for x in range(tile.ewidth):
+                        pixel = tile[x,y]
+                        tileM[x,y] = pixel[0] + pixel[0] + pixel[0] + "\xff"
+
+    # update
+    layerM.flush()
+    layerM.merge_shadow(True)
+    layerM.update(0, 0, img.width, img.height)
+
+
+
 register(
-    "python-fu-splitRGB",
-    "splitRGB",
-    "split RGB to each layer",
+    "python-fu-splitRGBA",
+    "splitRGBA",
+    "split RGB Value to each layer",
     "jscfping", "jscfping", "2020",
-    "<Image>/splitRGB",
+    "<Image>/splitRGBA",
     "RGB, RGB*",
     [],
     [],
-    splitRGB)
+    splitRGBA)
 
 main()
