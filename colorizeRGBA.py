@@ -2,25 +2,60 @@
 
 from gimpfu import *
 
-defaultType = 1 #RGBA-IMAGE
-defaultOpacity = 100
-defaultMode = 0 #NORMAL-MODE
 
+sysParas = {
+    "mode":{
+        "normal" : 0, #NORMAL-MODE
+        "grainMerge" : 21 # GRAIN-MERGE-MODE = 21
+    },
+    "type":{
+        "RGBA":1 # RGBA-IMAGE
+    },
+    "fill":{
+        "fg":0 # FOREGROUND-FILL = 0
+    },
+    "merge":{
+        "bottom":2 # CLIP-TO-BOTTOM-LAYER = 2
+    }
+}
 
+delt = {
+    "Opacity":100
+}
 
+paraS = {
+    "R" : "R",
+    "G" : "G",
+    "B" : "B",
+    "mask" : "mask",
+    "comebined" : "comebined"
+}
+
+rgbList = [paraS["R"], paraS["G"], paraS["B"]]
 
 
 def colorizeRGBA(img, layer, colorR, colorG, colorB):
     # start
-    pdb.gimp_message_set_handler(2)
+    startUpErrorLog()
     gimp.progress_init("spliting...")
     pdb.gimp_image_undo_group_start(img)
-    # pdb.gimp_message("Hello, world!")
-    pdb.gimp_context_set_foreground(colorR)
+    pdb.gimp_message("Hello, world!")
 
-    
-    
+    # copyMask(img, layer)
     splitRGBA(img, layer)
+    
+    makeMergeLayer(img, layer, 0, colorR)
+    makeMergeLayer(img, layer, 2, colorG)
+    makeMergeLayer(img, layer, 4, colorB)
+    # makeMergeLayer(img, layer, 0, createColor(251,197,227))
+    # makeMergeLayer(img, layer, 2, createColor(60,230,100))
+    # makeMergeLayer(img, layer, 4, createColor(100,30,180))
+    
+    hideAlllayers(img)
+    mergeRGBLayer(img)
+    
+    mixRGBLayer(img, layer)
+    
     
     # ready to end
     pdb.gimp_image_undo_group_end(img)
@@ -29,17 +64,97 @@ def colorizeRGBA(img, layer, colorR, colorG, colorB):
 
 
 
+def hideAlllayers(img):
+    for ly in img.layers:
+        ly.visible = False
 
-def splitRGBA(img, layer):
-    # start
-    layer.visible = False
 
-    copyMask(img, layer)
-    
+
+def startUpErrorLog():
+    pdb.gimp_message_set_handler(2)
+
+
+def findLayerNameIdx(img, layerName):
+    for ly in img.layers:
+        if ly.name == layerName:
+            return img.layers.index(ly)
+        else:
+            nouse = 0
+    return 0
+
+
+
+def mergeRGBLayer(img):
+    for ly in rgbList:
+        img.layers[findLayerNameIdx(img, ly)-1].visible = True
+        img.layers[findLayerNameIdx(img, ly)].visible = True
+        mergedLy = pdb.gimp_image_merge_visible_layers(img, sysParas["merge"]["bottom"])
+        mergedLy.visible = False
+
+
+
+def mixRGBLayer(img, layer):
+    mixedlyer = createNewLayer(img, paraS["comebined"], layer)
+    xBlocks, yBlocks = countBlocks(layer)
+    for yB in range(yBlocks):
+            for xB in range(xBlocks):
+                tile = tileFor(mixedlyer, xB, yB)
+                tileR = tileFor(img.layers[findLayerNameIdx(img, paraS["R"])], xB, yB)
+                tileG = tileFor(img.layers[findLayerNameIdx(img, paraS["G"])], xB, yB)
+                tileB = tileFor(img.layers[findLayerNameIdx(img, paraS["B"])], xB, yB)
+                
+                for y in range(tile.eheight):
+                    for x in range(tile.ewidth):
+                        tile[x,y] = mixPixel(tile[x,y], tileR[x,y])
+                        tile[x,y] = mixPixel(tile[x,y], tileG[x,y])
+                        tile[x,y] = mixPixel(tile[x,y], tileB[x,y])
+    updateLayer(img, mixedlyer)
+                        
+
+
+
+
+
+
+def tileFor(layer, xB, yB):
+    return layer.get_tile(False, yB, xB)
+
+
+def updateLayer(img, layer):
+    layer.flush()
+    layer.merge_shadow(True)
+    layer.update(0, 0, img.width, img.height)
+
+
+def createNewLayer(img, name, refLayer):
+    result = gimp.Layer(img, name, refLayer.width, refLayer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
+    img.add_layer(result, 0)
+    pdb.gimp_edit_clear(result)
+    result.flush()
+    return result
+
+
+
+def countBlocks(layer):
+    xBlocks = int(layer.width / 64)
+    if(layer.width % 64 > 0):
+        xBlocks += 1
+    else:
+        xBlocks = xBlocks
+
+    yBlocks = int(layer.height / 64)
+    if(layer.width % 64 > 0):
+        yBlocks += 1
+    else:
+        yBlocks = yBlocks
+    return xBlocks, yBlocks
+
+
+def splitRGBA(img, layer):   
     # Create the new layers.
-    layerR = gimp.Layer(img, "R", layer.width, layer.height, defaultType, defaultOpacity, defaultMode)
-    layerG = gimp.Layer(img, "G", layer.width, layer.height, defaultType, defaultOpacity, defaultMode)
-    layerB = gimp.Layer(img, "B", layer.width, layer.height, defaultType, defaultOpacity, defaultMode)
+    layerR = gimp.Layer(img, paraS["R"], layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
+    layerG = gimp.Layer(img, paraS["G"], layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
+    layerB = gimp.Layer(img, paraS["B"], layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
     img.add_layer(layerR, 0)
     img.add_layer(layerG, 1)
     img.add_layer(layerB, 2)
@@ -123,8 +238,7 @@ def splitRGBA(img, layer):
 def copyMask(img, layer):
 
     # Create the new layers.
-    layerM = gimp.Layer(img, "MASK", layer.width, layer.height, defaultType, defaultOpacity, defaultMode)
-    layerM.visible = False
+    layerM = gimp.Layer(img, paraS["mask"], layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
     img.add_layer(layerM, 0)
 
     
@@ -169,6 +283,47 @@ def copyMask(img, layer):
     layerM.merge_shadow(True)
     layerM.update(0, 0, img.width, img.height)
 
+
+
+# for test
+def createColor(r,g,b):
+    try:
+        return gimpcolor.RGB(r/255.0, g/255.0, b/255.0, 1.0)
+    except Exception as err:
+        return gimpcolor.RGB(0.0, 0.0, 0.0, 1.0)
+
+
+
+def makeMergeLayer(img, layer, order, color):
+    pdb.gimp_context_set_foreground(color)
+    
+    ly = gimp.Layer(img, "mergeLayer", layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["grainMerge"])
+    
+    img.add_layer(ly, order)
+    
+    pdb.gimp_drawable_fill(ly, sysParas["fill"]["fg"])
+
+
+
+def mixColorByte(iStr, mStr):
+    try:
+        i = ord(iStr)
+        m = ord(mStr)
+        return chr(int(round((i+m) / 2.0)))
+    except Exception as err:
+        return chr(0)
+
+
+def mixPixel(iPx, mPx):
+    try:
+        if iPx[3] == "\x00":
+            return mPx
+        elif mPx[3] == "\x00":
+            return iPx
+        else:
+            return mixColorByte(iPx[0], mPx[0]) + mixColorByte(iPx[1], mPx[1]) + mixColorByte(iPx[2], mPx[2]) + mixColorByte(iPx[3], mPx[3])
+    except Exception as err:
+        return "\x00\x00\x00\x00"
 
 
 register(
