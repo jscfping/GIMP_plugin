@@ -41,23 +41,21 @@ def colorizeRGBA(img, layer, colorR, colorG, colorB):
     pdb.gimp_image_undo_group_start(img)
     pdb.gimp_message("Hello, world!")
 
-    # copyMask(img, layer)
+
     splitRGBA(img, layer)
-    
+
     makeMergeLayer(img, layer, 0, colorR)
     makeMergeLayer(img, layer, 2, colorG)
     makeMergeLayer(img, layer, 4, colorB)
-    # makeMergeLayer(img, layer, 0, createColor(251,197,227))
-    # makeMergeLayer(img, layer, 2, createColor(60,230,100))
-    # makeMergeLayer(img, layer, 4, createColor(100,30,180))
+
     
     hideAlllayers(img)
     mergeRGBLayer(img)
-    
     mixRGBLayer(img, layer)
-    
+    ExportSourceMaskTo(img)
     
     # ready to end
+    pdb.gimp_selection_none(img)
     pdb.gimp_image_undo_group_end(img)
     pdb.gimp_displays_flush()
     pdb.gimp_progress_end()
@@ -79,9 +77,25 @@ def findLayerNameIdx(img, layerName):
         if ly.name == layerName:
             return img.layers.index(ly)
         else:
-            nouse = 0
+            thisLineNoUse = True
     return 0
 
+def getBottomLayer(img):
+    return img.layers[len(img.layers)-1]
+
+
+def ExportSourceMaskTo(img):
+    try:
+        if getBottomLayer(img).mask is not None:
+            pdb.gimp_image_select_item(img, CHANNEL_OP_REPLACE, getBottomLayer(img).mask)
+            newMask = pdb.gimp_layer_create_mask(img.layers[0], ADD_SELECTION_MASK)
+            img.layers[0].add_mask(newMask)
+        else:
+            thisLineNoUse = True
+    except Exception as err:
+        thisLineNoUse = True
+
+    
 
 
 def mergeRGBLayer(img):
@@ -233,55 +247,6 @@ def splitRGBA(img, layer):
     layerB.update(0, 0, img.width, img.height )
 
 
-
-
-def copyMask(img, layer):
-
-    # Create the new layers.
-    layerM = gimp.Layer(img, paraS["mask"], layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
-    img.add_layer(layerM, 0)
-
-    
-    # Clear the new layers.
-    pdb.gimp_edit_clear(layerM)
-    layerM.flush()
-
-    if layer.mask is None:
-        return
-    else:
-        nouse = 0
-
-    # for GIMP 64*64 pixels is a block unit for greater 64 pixels
-    xBlocks = int(layer.width / 64)
-    if(layer.width % 64 > 0):
-        xBlocks += 1
-    else:
-        xBlocks = xBlocks
-
-    yBlocks = int(layer.height / 64)
-    if(layer.width % 64 > 0):
-        yBlocks += 1
-    else:
-        yBlocks = yBlocks
-    
-    
-    
-    
-    for yB in range(yBlocks):
-            for xB in range(xBlocks):
-    
-                tile = layer.mask.get_tile(False, yB, xB)
-                tileM = layerM.get_tile(False, yB, xB)
-                
-                for y in range(tile.eheight):
-                    for x in range(tile.ewidth):
-                        pixel = tile[x,y]
-                        tileM[x,y] = pixel[0] + pixel[0] + pixel[0] + "\xff"
-
-    # update
-    layerM.flush()
-    layerM.merge_shadow(True)
-    layerM.update(0, 0, img.width, img.height)
 
 
 
