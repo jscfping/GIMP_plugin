@@ -2,23 +2,6 @@
 
 from gimpfu import *
 
-
-sysParas = {
-    "mode":{
-        "normal" : 0, #NORMAL-MODE
-        "grainMerge" : 21 # GRAIN-MERGE-MODE = 21
-    },
-    "type":{
-        "RGBA":1 # RGBA-IMAGE
-    },
-    "fill":{
-        "fg":0 # FOREGROUND-FILL = 0
-    },
-    "merge":{
-        "bottom":2 # CLIP-TO-BOTTOM-LAYER = 2
-    }
-}
-
 delt = {
     "Opacity":100
 }
@@ -102,7 +85,7 @@ def mergeRGBLayer(img):
     for ly in rgbList:
         img.layers[findLayerNameIdx(img, ly)-1].visible = True
         img.layers[findLayerNameIdx(img, ly)].visible = True
-        mergedLy = pdb.gimp_image_merge_visible_layers(img, sysParas["merge"]["bottom"])
+        mergedLy = pdb.gimp_image_merge_visible_layers(img, CLIP_TO_BOTTOM_LAYER)
         mergedLy.visible = False
 
 
@@ -141,7 +124,7 @@ def updateLayer(img, layer):
 
 
 def createNewLayer(img, name, refLayer):
-    result = gimp.Layer(img, name, refLayer.width, refLayer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
+    result = gimp.Layer(img, name, refLayer.width, refLayer.height, RGBA_IMAGE, delt["Opacity"], NORMAL_MODE)
     img.add_layer(result, 0)
     pdb.gimp_edit_clear(result)
     result.flush()
@@ -166,9 +149,9 @@ def countBlocks(layer):
 
 def splitRGBA(img, layer):   
     # Create the new layers.
-    layerR = gimp.Layer(img, paraS["R"], layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
-    layerG = gimp.Layer(img, paraS["G"], layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
-    layerB = gimp.Layer(img, paraS["B"], layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["normal"])
+    layerR = gimp.Layer(img, paraS["R"], layer.width, layer.height, RGBA_IMAGE, delt["Opacity"], NORMAL_MODE)
+    layerG = gimp.Layer(img, paraS["G"], layer.width, layer.height, RGBA_IMAGE, delt["Opacity"], NORMAL_MODE)
+    layerB = gimp.Layer(img, paraS["B"], layer.width, layer.height, RGBA_IMAGE, delt["Opacity"], NORMAL_MODE)
     img.add_layer(layerR, 0)
     img.add_layer(layerG, 1)
     img.add_layer(layerB, 2)
@@ -262,11 +245,11 @@ def createColor(r,g,b):
 def makeMergeLayer(img, layer, order, color):
     pdb.gimp_context_set_foreground(color)
     
-    ly = gimp.Layer(img, "mergeLayer", layer.width, layer.height, sysParas["type"]["RGBA"], delt["Opacity"], sysParas["mode"]["grainMerge"])
+    ly = gimp.Layer(img, "mergeLayer", layer.width, layer.height, RGBA_IMAGE, delt["Opacity"], GRAIN_MERGE_MODE)
     
     img.add_layer(ly, order)
     
-    pdb.gimp_drawable_fill(ly, sysParas["fill"]["fg"])
+    pdb.gimp_drawable_fill(ly, FOREGROUND_FILL)
 
 
 
